@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#080808">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon-192.png">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<title>ctrl+z — Speak</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@500,700,800,900&display=swap" rel="stylesheet">
+<style>
+  /* ctrl+z design language — tokens taken from roadmap.ctrlzstudio.agency */
+  :root {
+    --bg: #080808; --bg2: #111111; --bg3: #181818;
+    --line: #262626; --line2: #3a3a3a;
+    --ink: #f0ede8; --ink2: #8a8680; --ink3: #55524d;
+    --red: #F43638; --red-hot: #FF0027; --red-deep: #501101; --red-ink: #ffb8b8;
+    --display: 'Cabinet Grotesk', 'Helvetica Neue', Arial, sans-serif;
+    --mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 400 13px/1.65 var(--mono); -webkit-font-smoothing: antialiased; }
+  ::selection { background: var(--red); color: var(--bg); }
+  a { color: inherit; }
+  button, input, textarea { font: inherit; color: inherit; border-radius: 0; }
+  :focus-visible { outline: 1px solid var(--red); outline-offset: 3px; }
+  hr { border: 0; border-top: 1px solid var(--line); margin: 0; }
+  [hidden] { display: none !important; }
+
+  .wrap { max-width: 980px; margin: 0 auto; padding: 26px 32px 90px; }
+  .red { color: var(--red); } .dim { color: var(--ink2); } .faint { color: var(--ink3); }
+
+  /* top bar */
+  .top { display: flex; justify-content: space-between; align-items: center; gap: 16px; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink2); margin-bottom: 54px; }
+  .brand b { color: var(--red); font-weight: 500; }
+  .brand { display: flex; align-items: center; gap: 8px; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--red); display: inline-block; }
+  .dot.live { animation: pulse 1.6s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .25; } }
+  .top nav { display: flex; gap: 22px; align-items: center; }
+  .top nav a { text-decoration: none; padding-bottom: 3px; border-bottom: 1px solid transparent; }
+  .top nav a:hover { color: var(--ink); }
+  .top nav a.on { color: var(--ink); border-color: var(--red); }
+  .top .ver { color: var(--ink3); }
+
+  /* type */
+  .display { font-family: var(--display); font-weight: 800; letter-spacing: -.045em; line-height: .9; margin: 0; }
+  h1.display { font-size: clamp(52px, 10vw, 96px); }
+  h1.display.sm { font-size: clamp(44px, 8vw, 72px); }
+  h1.display .dim { font-weight: 500; }
+  h2.sech { font-family: var(--display); font-weight: 800; font-size: clamp(30px, 5vw, 41px); letter-spacing: -.03em; line-height: 1.02; margin: 14px 0 10px; }
+  .tag { color: var(--ink2); max-width: 46ch; margin: 26px 0 0; }
+  .lbl { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink2); }
+  .eyebrow { display: inline-block; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--red); border-bottom: 1px solid var(--red); padding-bottom: 3px; }
+
+  /* section grid: label column + content, like the roadmap */
+  .sec { display: grid; grid-template-columns: 150px 1fr; gap: 24px; padding: 44px 0; border-top: 1px solid var(--line); }
+  .sec > .k { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--red); padding-top: 4px; }
+  .sec p { color: var(--ink2); max-width: 56ch; margin: 0 0 18px; }
+
+  /* meter */
+  .meter { display: flex; align-items: center; gap: 22px; border: 1px solid var(--line); background: var(--bg2); padding: 18px 24px; margin: 34px 0 0; }
+  .meter .big { font-family: var(--display); font-weight: 800; font-size: 46px; letter-spacing: -.04em; line-height: 1; color: var(--red); white-space: nowrap; }
+  .meter .big small { font: 400 13px var(--mono); color: var(--ink3); letter-spacing: 0; margin-left: 4px; }
+  .meter .bar { flex: 1; height: 2px; background: var(--line2); position: relative; }
+  .meter .bar i { position: absolute; inset: 0 auto 0 0; background: var(--red); }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--line); border-top: 0; }
+  .stats.four { grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--line); margin-top: 34px; }
+  .stats > div { padding: 16px 24px; border-left: 1px solid var(--line); }
+  .stats > div:first-child { border-left: 0; }
+  .stats .v { font-family: var(--display); font-weight: 800; font-size: 30px; letter-spacing: -.03em; line-height: 1.1; margin-top: 4px; }
+  .stats .v small { font: 400 11px var(--mono); color: var(--ink3); letter-spacing: .08em; margin-left: 6px; }
+
+  /* controls */
+  .btn { display: inline-flex; align-items: center; gap: 10px; background: transparent; border: 1px solid var(--line2); color: var(--ink); padding: 14px 22px; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; cursor: pointer; text-decoration: none; transition: border-color .15s, background .15s, color .15s; }
+  .btn:hover { border-color: var(--ink); }
+  .btn.primary { background: var(--red); border-color: var(--red); color: var(--bg); font-weight: 600; }
+  .btn.primary:hover { background: var(--red-hot); border-color: var(--red-hot); }
+  .btn.danger { border-color: var(--red); color: var(--red); }
+  .btn.danger:hover { background: var(--red); color: var(--bg); }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+  .btns { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-top: 22px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 22px; }
+  .chip { background: transparent; border: 1px solid var(--line2); color: var(--ink2); padding: 8px 14px; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; cursor: pointer; }
+  .chip:hover { color: var(--ink); border-color: var(--ink2); }
+  .chip.on { border-color: var(--red); color: var(--red); background: rgba(244,54,56,.07); }
+  .field { width: 100%; background: var(--bg2); border: 1px solid var(--line); color: var(--ink); padding: 13px 14px; }
+  .field::placeholder { color: var(--ink3); }
+  .field:focus { border-color: var(--red); outline: 0; }
+  textarea.field { min-height: 170px; resize: vertical; line-height: 1.6; }
+  .check { width: 22px; height: 22px; border: 1px solid var(--line2); background: transparent; cursor: pointer; display: inline-grid; place-items: center; flex: none; color: var(--bg); padding: 0; }
+  .check.on { background: var(--red); border-color: var(--red); }
+  .tick { display: flex; align-items: center; gap: 12px; color: var(--ink2); font-size: 12px; margin-top: 18px; cursor: pointer; }
+  .warn { border: 1px solid var(--red); color: var(--red-ink); padding: 12px 14px; margin-bottom: 20px; background: rgba(244,54,56,.06); }
+
+  /* list rows */
+  .rows { border-top: 1px solid var(--line); }
+  .rowitem { display: grid; grid-template-columns: 44px 1fr auto; gap: 16px; align-items: baseline; padding: 20px 0; border-bottom: 1px solid var(--line); text-decoration: none; }
+  a.rowitem:hover .t { color: var(--red); }
+  .rowitem .n { color: var(--ink3); font-size: 11px; }
+  .rowitem .t { font-family: var(--display); font-weight: 700; font-size: 22px; letter-spacing: -.02em; line-height: 1.2; transition: color .15s; }
+  .rowitem .d { color: var(--ink2); margin-top: 2px; }
+  .rowitem .m { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink2); text-align: right; white-space: nowrap; }
+
+  /* drill card */
+  .drill { border: 1px solid var(--red); background: rgba(244,54,56,.05); padding: 24px 26px; }
+  .drill .body { font-family: var(--display); font-weight: 600; font-size: 22px; letter-spacing: -.015em; line-height: 1.3; color: var(--ink); }
+  .drill .body p { color: var(--ink); max-width: none; margin: 0; }
+  .drill .foot { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line2); }
+
+  /* chart */
+  .bars { position: relative; height: 120px; display: flex; gap: 6px; align-items: flex-end; border-bottom: 1px solid var(--line2); }
+  .bars i { flex: 1; background: var(--line2); min-height: 2px; }
+  .bars i.hit { background: var(--red); }
+  .bars .goal { position: absolute; left: 0; right: 0; border-top: 1px dashed var(--ink3); pointer-events: none; }
+  .bars .goal span { position: absolute; right: 0; top: -17px; font-size: 10px; letter-spacing: .12em; color: var(--ink3); }
+  .xl { display: flex; gap: 6px; margin-top: 6px; }
+  .xl span { flex: 1; text-align: center; font-size: 9px; color: var(--ink3); letter-spacing: .04em; }
+  .gap32 { height: 34px; }
+
+  /* call */
+  .clock { font-family: var(--display); font-weight: 800; font-size: clamp(110px, 24vw, 240px); letter-spacing: -.06em; line-height: .82; font-variant-numeric: tabular-nums; }
+  .clock b { color: var(--red); font-weight: 800; }
+  .clock em { font-style: normal; color: var(--ink2); font-weight: 500; }
+  .meters { margin: 42px 0 8px; border-top: 1px solid var(--line); }
+  .mrow { display: grid; grid-template-columns: 90px 1fr; align-items: center; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+  .mrow canvas { width: 100%; height: 44px; display: block; }
+  .captions { margin-top: 26px; border: 1px solid var(--line); background: var(--bg2); padding: 18px 20px; max-height: 38vh; overflow-y: auto; }
+  .cap { margin: 0 0 12px; max-width: none; color: var(--ink); }
+  .cap b { font-weight: 500; letter-spacing: .12em; font-size: 10px; text-transform: uppercase; margin-right: 10px; color: var(--ink3); }
+  .cap.friend b { color: var(--red); }
+  .cap.partial { opacity: .55; }
+
+  /* review */
+  .scores { display: grid; gap: 10px; max-width: 520px; }
+  .score { display: grid; grid-template-columns: 120px 1fr 28px; align-items: center; gap: 14px; }
+  .score .sq { display: flex; gap: 3px; }
+  .score .sq i { flex: 1; height: 10px; background: var(--line2); }
+  .score .sq i.on { background: var(--red); }
+  .score .v { text-align: right; font-family: var(--display); font-weight: 800; font-size: 18px; }
+  .lead { font-family: var(--display); font-weight: 500; font-size: clamp(22px, 3.2vw, 30px); letter-spacing: -.02em; line-height: 1.25; color: var(--ink); max-width: 30ch; }
+  .lead p { color: var(--ink); max-width: none; }
+  blockquote { margin: 0; padding: 4px 0 4px 20px; border-left: 2px solid var(--red); color: var(--ink); }
+  .sec blockquote p { color: var(--ink); max-width: none; margin: 0; }
+  .items { border-top: 1px solid var(--line); }
+  .item { display: grid; grid-template-columns: 40px 1fr; gap: 14px; padding: 16px 0; border-bottom: 1px solid var(--line); color: var(--ink); }
+  .item .n { color: var(--red); font-size: 11px; padding-top: 2px; }
+  strong { font-weight: 600; color: var(--ink); }
+  code { background: var(--bg3); padding: 1px 5px; }
+  details { margin-top: 8px; }
+  summary { cursor: pointer; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink2); padding: 10px 0; }
+  summary:hover { color: var(--ink); }
+  pre.tr { white-space: pre-wrap; font: inherit; color: var(--ink2); margin: 10px 0 0; max-height: 50vh; overflow: auto; border: 1px solid var(--line); background: var(--bg2); padding: 16px; }
+  footer { margin-top: 60px; color: var(--ink3); font-size: 11px; letter-spacing: .04em; max-width: 70ch; }
+
+  @media (max-width: 720px) {
+    .wrap { padding: 20px 18px 70px; }
+    .sec { grid-template-columns: 1fr; gap: 10px; padding: 34px 0; }
+    .stats > div { padding: 14px 14px; }
+    .stats .v { font-size: 26px; }
+    .stats.four { grid-template-columns: repeat(2, 1fr); }
+    .stats.four > div:nth-child(3) { border-left: 0; }
+    .stats.four > div:nth-child(n+3) { border-top: 1px solid var(--line); }
+    .top .ver { display: none; }
+    .rowitem { grid-template-columns: 30px 1fr; } .rowitem .m { grid-column: 2; text-align: left; }
+    .score { grid-template-columns: 90px 1fr 24px; }
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+/* ---------- helpers ---------- */
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const pad = (n) => String(n).padStart(2, '0');
+const mmss = (s) => `${pad(Math.floor(s / 60))}:${pad(Math.floor(s % 60))}`;
+const dLabel = (iso) => new Date(iso).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' }).toUpperCase();
+const tLabel = (iso) => new Date(iso).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' }).toUpperCase();
+const CHECK = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 6.5l3 3 5-6"/></svg>';
+
+async function api(path, opts = {}) {
+  const r = await fetch(path, { headers: { 'Content-Type': 'application/json' }, ...opts });
+  if (r.status === 401 && !path.includes('/login')) { const e = new Error('login required'); e.auth = true; showLogin(); throw e; }
+  if (!r.ok) {
+    let msg = ''; try { msg = (await r.json()).error; } catch {}
+    throw new Error(msg || r.statusText);
+  }
+  return r.json();
+}
+
+// very small markdown: **bold**, `code`, numbered / bulleted lists, paragraphs
+function md(text) {
+  const inl = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/`([^`]+)`/g, '<code>$1</code>');
+  const out = []; let list = null; let para = [];
+  const flushPara = () => { if (para.length) { out.push(`<p>${para.map(inl).join('<br>')}</p>`); para = []; } };
+  const flushList = () => {
+    if (list) {
+      out.push(`<div class="items">${list.map((t, i) => `<div class="item"><span class="n">${pad(i + 1)}</span><div>${t.map(inl).join('<br>')}</div></div>`).join('')}</div>`);
+      list = null;
+    }
+  };
+  for (const raw of String(text || '').split('\n')) {
+    const line = raw.trimEnd();
+    const li = line.match(/^\s*(?:\d+[.)]|[-*•])\s+(.*)$/);
+    if (li) { flushPara(); (list = list || []).push([li[1]]); }
+    else if (!line.trim()) { flushPara(); flushList(); }
+    else if (list) list[list.length - 1].push(line.trim());
+    else para.push(line.trim());
+  }
+  flushPara(); flushList();
+  return out.join('');
+}
+
+/* ---------- state ---------- */
+const S = {
+  state: null, sessions: [], session: null,
+  mode: 'free', topic: '', useDrill: true, pasteOpen: false, copied: false,
+  call: { active: false, live: false, muted: false, captions: false, lines: [], partial: {}, t0: 0 },
+  err: '', authRequired: false,
+};
+const app = document.getElementById('app');
+
+/* ---------- shell ---------- */
+function topbar(active) {
+  return `<header class="top">
+    <div class="brand"><b>CTRL+Z</b><i class="dot"></i><span>SPEAK</span></div>
+    <nav>
+      <a href="#/" class="${active === 'today' ? 'on' : ''}">Today</a>
+      <a href="#/history" class="${active === 'history' ? 'on' : ''}">History</a>
+      ${S.authRequired ? '<a href="#/" data-act="logout">Sign out</a>' : ''}
+      <span class="ver">SPEAKING PROTOCOL / V3.0</span>
+    </nav></header>`;
+}
+const foot = `<footer>Your history is stored privately on this app's own server. During a call your voice goes to Gemini, and nothing else leaves.</footer>`;
+const page = (active, inner, keep) => { const y = window.scrollY; app.innerHTML = `<div class="wrap">${topbar(active)}${inner}${foot}</div>`; window.scrollTo(0, keep ? y : 0); };
+
+/* ---------- LOGIN ---------- */
+function showLogin(msg) {
+  S.authRequired = true;
+  app.innerHTML = `<div class="wrap">
+    <header class="top"><div class="brand"><b>CTRL+Z</b><i class="dot"></i><span>SPEAK</span></div><nav><span class="ver">PRIVATE</span></nav></header>
+    <h1 class="display">Say the<br><span class="dim">passcode.</span></h1>
+    <form id="loginForm" style="max-width:420px;margin-top:40px">
+      <div class="lbl" style="margin-bottom:10px">Passcode</div>
+      <input class="field" id="pass" type="password" autocomplete="current-password" autofocus>
+      <div class="btns" style="margin-top:18px"><button class="btn primary" type="submit">Enter →</button><span class="faint" id="loginMsg">${esc(msg || '')}</span></div>
+    </form></div>`;
+  document.getElementById('loginForm').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const m = document.getElementById('loginMsg'), v = document.getElementById('pass').value;
+    m.textContent = 'Checking…';
+    try { await api('/api/login', { method: 'POST', body: JSON.stringify({ passcode: v }) }); route(); }
+    catch (e) { m.textContent = e.message; m.style.color = 'var(--red)'; }
+  });
+}
+
+/* ---------- HOME ---------- */
+async function showHome() {
+  try {
+    [S.state, S.sessions] = await Promise.all([api('/api/state'), api('/api/sessions')]);
+  } catch (e) { if (e.auth) return; page('today', `<p class="warn">Could not reach the server: ${esc(e.message)}</p>`); return; }
+  renderHome();
+}
+
+function renderHome(keep) {
+  const st = S.state;
+  const pct = Math.min(100, (st.todayMinutes / st.goalMin) * 100);
+  const hours = (st.totals.minutes / 60).toFixed(1);
+  const pending = S.sessions[0] && !S.sessions[0].hasFeedback ? S.sessions[0] : null;
+  const drill = st.drill;
+
+  const maxM = Math.max(st.goalMin * 1.15, ...st.last14.map((d) => d.minutes), 1);
+  const chart = `<div class="bars">${st.last14.map((d) => `<i class="${d.minutes >= st.goalMin ? 'hit' : ''}" style="height:${(d.minutes / maxM) * 100}%" title="${d.date}: ${d.minutes} min"></i>`).join('')}
+      <div class="goal" style="bottom:${(st.goalMin / maxM) * 100}%"><span>GOAL ${st.goalMin}</span></div></div>
+    <div class="xl">${st.last14.map((d) => `<span>${Number(d.date.slice(8))}</span>`).join('')}</div>`;
+  const trend = st.scored.length >= 2 ? `<div class="gap32"></div><div class="lbl" style="margin-bottom:12px">Coach score · average of 5, last ${st.scored.length} reviewed calls</div>
+    <div class="bars" style="height:80px">${st.scored.map((s) => `<i class="hit" style="height:${s.avg * 10}%" title="${s.date}: ${s.avg}"></i>`).join('')}</div>
+    <div class="xl">${st.scored.map((s) => `<span>${s.avg}</span>`).join('')}</div>` : '';
+
+  page('today', `
+    <section>
+      <h1 class="display">The daily <span class="red">rep.</span><br><span class="dim">Say it out loud.</span></h1>
+      <p class="tag">A voice call with a friend who answers back. Then an honest read, and one drill for tomorrow.</p>
+    </section>
+    <div class="meter">
+      <div class="big">${Math.floor(st.todayMinutes)}<small>/${st.goalMin}</small></div>
+      <div class="bar"><i style="width:${pct}%"></i></div>
+      <div class="lbl">MIN TODAY</div>
+    </div>
+    <div class="stats">
+      <div><div class="lbl">Streak</div><div class="v">${st.streak}<small>DAYS</small></div></div>
+      <div><div class="lbl">Calls</div><div class="v">${st.totals.sessions}</div></div>
+      <div><div class="lbl">Total</div><div class="v">${hours}<small>HRS</small></div></div>
+    </div>
+
+    ${pending ? `<div class="sec" style="padding:26px 0 0;border:0;display:block"><div class="warn" style="margin:0">Your last call (${dLabel(pending.startedAt)}, ${mmss(pending.durationSec)}) has no feedback yet. <a class="red" href="#/review/${pending.id}">Get the read →</a></div></div>` : ''}
+
+    <section class="sec" style="margin-top:34px">
+      <div class="k">SEC / 01</div>
+      <div>
+        <span class="eyebrow">Start a call</span>
+        <h2 class="sech">Pick the <span class="red">focus.</span></h2>
+        <p>Choose what you want to practise today, or just talk. Add a topic if you like.</p>
+        ${st.keyConfigured ? '' : '<div class="warn">No API key found. Copy <code>.env.example</code> to <code>.env</code>, paste your Gemini key and restart the server.</div>'}
+        <div class="chips">${st.modes.map((m) => `<button class="chip ${S.mode === m.key ? 'on' : ''}" data-act="mode" data-v="${m.key}">${esc(m.label)}</button>`).join('')}</div>
+        <input class="field" id="topic" placeholder="Optional topic: my week, a decision I'm stuck on, a movie…" value="${esc(S.topic)}" maxlength="300">
+        ${drill && !drill.done ? `<label class="tick" data-act="useDrill"><button class="check ${S.useDrill ? 'on' : ''}" type="button" aria-label="Work my drill into the call">${S.useDrill ? CHECK : ''}</button><span>Work yesterday's drill into this call (your friend won't mention it)</span></label>` : ''}
+        <div class="btns"><button class="btn primary" data-act="start">Start call →</button><span class="faint">Headphones on. Allow the mic when asked.</span></div>
+      </div>
+    </section>
+
+    <section class="sec">
+      <div class="k">SEC / 02</div>
+      <div>
+        <span class="eyebrow">Today's drill</span>
+        <h2 class="sech">${drill ? 'One thing. <span class="red">Do it.</span>' : 'No drill <span class="red">yet.</span>'}</h2>
+        ${drill ? `<div class="drill"><div class="body">${md(drill.text)}</div>
+            <div class="foot"><a class="lbl" href="#/review/${drill.sessionId}">FROM ${dLabel(drill.startedAt)} →</a>
+            <label class="tick" style="margin:0" data-act="drillDone" data-id="${drill.sessionId}" data-done="${drill.done ? 1 : 0}"><span>${drill.done ? 'DONE' : 'MARK DONE'}</span><button class="check ${drill.done ? 'on' : ''}" type="button">${drill.done ? CHECK : ''}</button></label></div></div>`
+            : '<p>Finish a call, paste Claude\'s feedback into the app, and your next drill shows up here.</p>'}
+      </div>
+    </section>
+
+    <section class="sec">
+      <div class="k">SEC / 03</div>
+      <div>
+        <span class="eyebrow">Last 14 days</span>
+        <h2 class="sech">Show <span class="red">up.</span></h2>
+        <p>Red bars hit your ${st.goalMin}-minute goal. A day counts toward your streak at ${st.streakMin}+ minutes.</p>
+        ${chart}${trend}
+      </div>
+    </section>`, keep);
+}
+
+/* ---------- HISTORY ---------- */
+async function showHistory() {
+  try { S.sessions = await api('/api/sessions'); } catch (e) { if (e.auth) return; page('history', `<p class="warn">${esc(e.message)}</p>`); return; }
+  const rows = S.sessions.map((s, i) => `<a class="rowitem" href="#/review/${s.id}">
+      <span class="n">${pad(S.sessions.length - i)}</span>
+      <div><div class="t">${dLabel(s.startedAt)} · ${tLabel(s.startedAt)}</div>
+        <div class="d">${esc(modeLabel(s.mode))}${s.topic ? ' · ' + esc(s.topic) : ''}</div></div>
+      <div class="m">${mmss(s.durationSec)} · ${s.stats.fillersPer100}/100w fillers<br>${s.hasFeedback ? `<span class="red">READ ✓${s.avgScore ? ' · ' + s.avgScore : ''}</span>` : '<span class="faint">NO FEEDBACK YET</span>'}</div>
+    </a>`).join('');
+  page('history', `
+    <section><h1 class="display sm">Every <span class="red">rep.</span><br><span class="dim">Logged.</span></h1></section>
+    <div style="height:44px"></div>
+    ${rows ? `<div class="rows">${rows}</div>` : '<p class="dim">No calls yet. Go start one.</p>'}`);
+}
+const modeLabel = (k) => (S.state?.modes || []).find((m) => m.key === k)?.label || 'Free chat';
+
+/* ---------- REVIEW ---------- */
+async function showReview(id) {
+  try {
+    S.session = await api('/api/sessions/' + id);
+    if (!S.state) S.state = await api('/api/state');
+  } catch (e) { if (e.auth) return; page('history', '<p class="warn">Could not find that call.</p>'); return; }
+  S.pasteOpen = !S.session.feedback; S.copied = false;
+  renderReview();
+}
+
+function feedbackPrompt(s) {
+  const st = s.stats;
+  const tr = s.lines.map((l) => `[${mmss(l.t)}] ${l.who === 'user' ? 'ME' : 'FRIEND'}: ${l.text}`).join('\n');
+  return `Act as my communication coach. Below is a transcript of a voice practice call I had with a friend (ME = my lines, FRIEND = the other side). Judge only my lines.
+
+Context: focus = ${s.modeLabel || modeLabel(s.mode)}${s.topic ? `, topic = ${s.topic}` : ''}. Length ${mmss(s.durationSec)}. Auto-count: ${st.fillers} filler words (um, uh, you know, I mean, sort of, kind of, basically, actually, literally, honestly) in ${st.userWords} of my words. The transcript may have dropped some fillers, so treat counts as approximate. Also look for "like" used as a filler.${s.drillUsed ? `\nLast time's drill was: "${s.drillUsed}". In WORK ON, tell me whether I applied it.` : ''}
+
+Reply in EXACTLY this format: markdown, these headings in this order, nothing before or after. Be direct, quote my actual words, under 350 words in total.
+
+## SUMMARY
+Two sentences.
+
+## SCORES
+Clarity: n
+Structure: n
+Fluency: n
+Vocabulary: n
+Engagement: n
+(each a whole number from 1 to 10, no other text in this section)
+
+## STRONGEST MOMENT
+Quote it, then one line on why it worked.
+
+## WORK ON
+Three numbered points. Each: what I said (quote), why it hurts, a sharper version.
+
+## DRILL
+ONE specific drill for my next call: 5 to 10 minutes, doable inside a normal conversation. Start with a verb. Max 3 lines.
+
+TRANSCRIPT:
+${tr}`;
+}
+
+function renderReview(keep) {
+  const s = S.session, st = s.stats, fb = s.feedback;
+  const byWord = Object.entries(st.byWord || {}).sort((a, b) => b[1] - a[1]).map(([w, n]) => `${w} ×${n}`).join(' · ');
+  const sec = fb?.sections || {};
+
+  const feedbackHtml = !fb ? '' : (fb.parsed ? `
+    <section class="sec"><div class="k">SEC / 02</div><div>
+      <span class="eyebrow">The read</span>
+      <h2 class="sech">Straight <span class="red">up.</span></h2>
+      ${sec.summary ? `<div class="lead">${md(sec.summary)}</div>` : ''}
+      ${fb.scores?.length ? `<div class="scores" style="margin-top:26px">${fb.scores.map((x) => `<div class="score"><span class="lbl">${esc(x.name)}</span><div class="sq">${Array.from({ length: 10 }, (_, i) => `<i class="${i < x.value ? 'on' : ''}"></i>`).join('')}</div><span class="v">${x.value}</span></div>`).join('')}</div>
+        <p class="faint" style="margin-top:14px;font-size:11px">A coach's read from one transcript. Use it for direction over weeks, not as a measurement.</p>` : ''}
+    </div></section>
+    ${sec.strongest ? `<section class="sec"><div class="k">SEC / 03</div><div><span class="eyebrow">What worked</span><h2 class="sech">Do more of <span class="red">this.</span></h2><blockquote>${md(sec.strongest)}</blockquote></div></section>` : ''}
+    ${sec.workOn ? `<section class="sec"><div class="k">SEC / 04</div><div><span class="eyebrow">Work on</span><h2 class="sech">Sharpen the <span class="red">edges.</span></h2>${md(sec.workOn)}</div></section>` : ''}
+    ${sec.drill ? `<section class="sec"><div class="k">SEC / 05</div><div><span class="eyebrow">Tomorrow</span><h2 class="sech">Your <span class="red">drill.</span></h2>
+      <div class="drill"><div class="body">${md(sec.drill)}</div>
+      <div class="foot"><span class="lbl">Your friend will create openings for it next call</span>
+      <label class="tick" style="margin:0" data-act="drillDone" data-id="${s.id}" data-done="${s.drillDone ? 1 : 0}"><span>${s.drillDone ? 'DONE' : 'MARK DONE'}</span><button class="check ${s.drillDone ? 'on' : ''}" type="button">${s.drillDone ? CHECK : ''}</button></label></div></div></div></section>` : ''}`
+    : `<section class="sec"><div class="k">SEC / 02</div><div><span class="eyebrow">The read</span><h2 class="sech">Saved, <span class="red">unformatted.</span></h2>
+        <div class="warn">I couldn't find the four headings, so this is Claude's reply as-is. Next time, paste the prompt exactly as copied.</div>${md(fb.raw)}</div></section>`);
+
+  const getRead = `
+    <section class="sec"><div class="k">SEC / 01</div><div>
+      <span class="eyebrow">${fb ? 'Feedback saved' : 'Get the read'}</span>
+      <h2 class="sech">${fb ? 'Update the <span class="red">read.</span>' : 'Ask <span class="red">Claude.</span>'}</h2>
+      ${fb && !S.pasteOpen ? `<div class="btns" style="margin-top:0"><button class="btn" data-act="togglePaste">Paste a different reply</button><button class="btn" data-act="copyPrompt">${S.copied ? 'Copied ✓' : 'Copy prompt again'}</button></div>` : `
+      <p>1. Copy the prompt. 2. Paste it into your Claude chat and send. 3. Copy Claude's reply and paste it below.</p>
+      <div class="btns" style="margin:0 0 22px"><button class="btn primary" data-act="copyPrompt">${S.copied ? 'Copied ✓' : 'Copy prompt'}</button><a class="btn" href="https://claude.ai/new" target="_blank" rel="noopener">Open Claude →</a></div>
+      <textarea class="field" id="fbRaw" placeholder="Paste Claude's reply here…"></textarea>
+      <div class="btns"><button class="btn primary" data-act="saveFeedback">Save feedback</button>${fb ? '<button class="btn" data-act="togglePaste">Cancel</button>' : ''}<span class="faint" id="fbMsg"></span></div>`}
+    </div></section>`;
+
+  const transcript = `<details><summary>Transcript</summary><pre class="tr">${esc(s.lines.map((l) => `[${mmss(l.t)}] ${l.who === 'user' ? 'ME' : 'FRIEND'}: ${l.text}`).join('\n'))}</pre></details>`;
+
+  page('history', `
+    <section>
+      <span class="eyebrow">${dLabel(s.startedAt)} · ${tLabel(s.startedAt)} · ${esc(s.modeLabel || modeLabel(s.mode))}</span>
+      <h1 class="display sm" style="margin-top:22px">Call <span class="red">logged.</span><br><span class="dim">Now the honest part.</span></h1>
+    </section>
+    <div class="stats four">
+      <div><div class="lbl">Duration</div><div class="v">${mmss(s.durationSec)}</div></div>
+      <div><div class="lbl">Your share</div><div class="v">${st.share}<small>%</small></div></div>
+      <div><div class="lbl">Fillers</div><div class="v">${st.fillersPer100}<small>/100 WORDS</small></div></div>
+      <div><div class="lbl">Your words</div><div class="v">${st.userWords.toLocaleString()}</div></div>
+    </div>
+    ${byWord ? `<p class="faint" style="margin:12px 0 0;font-size:11px">${esc(byWord)}</p>` : ''}
+    ${getRead}
+    ${feedbackHtml}
+    <div style="margin-top:34px">${transcript}</div>
+    <div class="btns"><a class="btn" href="#/">← Today</a></div>`, keep);
+}
+
+/* ---------- CALL ---------- */
+const C = S.call;
+let ws, micCtx, playCtx, stream, node, nextTime = 0, timerId, meterId;
+const playing = new Set();
+const lv = { you: 0, friend: 0, youArr: Array(72).fill(0), frArr: Array(72).fill(0) };
+
+const workletSrc = `
+class Capture extends AudioWorkletProcessor {
+  constructor() { super(); this.buf = new Int16Array(2048); this.n = 0; }
+  process(inputs) {
+    const ch = inputs[0] && inputs[0][0];
+    if (!ch) return true;
+    for (let i = 0; i < ch.length; i++) {
+      const s = Math.max(-1, Math.min(1, ch[i]));
+      this.buf[this.n++] = s < 0 ? s * 0x8000 : s * 0x7fff;
+      if (this.n === this.buf.length) {
+        const out = this.buf.slice(0);
+        this.port.postMessage(out.buffer, [out.buffer]);
+        this.n = 0;
+      }
+    }
+    return true;
+  }
+}
+registerProcessor('capture', Capture);`;
+
+function renderCall() {
+  app.innerHTML = `<div class="wrap">
+    <header class="top"><div class="brand"><b>CTRL+Z</b><i class="dot live"></i><span>SPEAK</span></div><span id="callstate">CONNECTING</span></header>
+    <section>
+      <div class="clock" id="clock"><span>00</span><b>:</b><em>00</em></div>
+      <p class="tag" id="status">Connecting…</p>
+    </section>
+    <div class="meters">
+      <div class="mrow"><span class="lbl">You</span><canvas id="mYou"></canvas></div>
+      <div class="mrow"><span class="lbl red">Friend</span><canvas id="mFriend"></canvas></div>
+    </div>
+    <div class="btns">
+      <button class="btn" data-act="mute" id="muteBtn">Mute mic</button>
+      <button class="btn" data-act="captions" id="capBtn">Show transcript</button>
+      <button class="btn danger" data-act="end">End call</button>
+    </div>
+    <div class="captions" id="captions" hidden></div>
+  </div>`;
+  C.captions = false;
+  drawMeters();
+}
+
+function captionsHtml() {
+  const rows = C.lines.map((l) => `<p class="cap ${l.who === 'model' ? 'friend' : ''}"><b>${l.who === 'user' ? 'You' : 'Friend'}</b>${esc(l.text)}</p>`);
+  for (const who of ['user', 'model']) if (C.partial[who]) rows.push(`<p class="cap partial ${who === 'model' ? 'friend' : ''}"><b>${who === 'user' ? 'You' : 'Friend'}</b>${esc(C.partial[who])}</p>`);
+  return rows.join('') || '<p class="cap faint">Nothing yet.</p>';
+}
+function refreshCaptions() {
+  const el = document.getElementById('captions');
+  if (el && C.captions) { el.innerHTML = captionsHtml(); el.scrollTop = el.scrollHeight; }
+}
+
+function drawOne(canvas, arr, color) {
+  if (!canvas) return;
+  const dpr = window.devicePixelRatio || 1, w = canvas.clientWidth, h = canvas.clientHeight;
+  if (canvas.width !== Math.round(w * dpr)) { canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr); }
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  const n = arr.length, gap = 3, bw = Math.max(2, (w - (n - 1) * gap) / n);
+  ctx.fillStyle = color;
+  arr.forEach((v, i) => { const bh = Math.max(2, v * h); ctx.fillRect(i * (bw + gap), (h - bh) / 2, bw, bh); });
+}
+function drawMeters() {
+  drawOne(document.getElementById('mYou'), lv.youArr, '#f0ede8');
+  drawOne(document.getElementById('mFriend'), lv.frArr, '#F43638');
+}
+
+function playPcm(ab) {
+  if (!playCtx || ab.byteLength < 2) return;
+  const i16 = new Int16Array(ab, 0, Math.floor(ab.byteLength / 2));
+  const f32 = new Float32Array(i16.length);
+  let sum = 0;
+  for (let i = 0; i < i16.length; i++) { f32[i] = i16[i] / 32768; sum += f32[i] * f32[i]; }
+  lv.friend = Math.max(lv.friend, Math.min(1, Math.sqrt(sum / i16.length) * 5));
+  const buf = playCtx.createBuffer(1, f32.length, 24000);
+  buf.copyToChannel(f32, 0);
+  const src = playCtx.createBufferSource();
+  src.buffer = buf; src.connect(playCtx.destination);
+  const at = Math.max(playCtx.currentTime + 0.02, nextTime);
+  src.start(at); nextTime = at + buf.duration;
+  playing.add(src); src.onended = () => playing.delete(src);
+}
+function stopPlayback() { for (const s of playing) { try { s.stop(); } catch {} } playing.clear(); nextTime = 0; }
+
+function cleanupAudio() {
+  try { stream && stream.getTracks().forEach((t) => t.stop()); } catch {}
+  try { micCtx && micCtx.close(); } catch {}
+  try { playCtx && playCtx.close(); } catch {}
+  stream = micCtx = playCtx = node = null;
+}
+let wake = null, pingId = null;
+async function keepAwake(on) { // stops the phone screen sleeping mid-call
+  try { if (on) wake = await navigator.wakeLock?.request('screen'); else { await wake?.release(); wake = null; } } catch {}
+}
+document.addEventListener('visibilitychange', () => { if (C.live && document.visibilityState === 'visible') keepAwake(true); });
+function endLocal() {
+  C.live = false; C.active = false;
+  clearInterval(timerId); clearInterval(meterId); clearInterval(pingId); keepAwake(false);
+  stopPlayback(); cleanupAudio();
+}
+
+async function startCall() {
+  S.topic = (document.getElementById('topic')?.value || '').trim();
+  S.err = '';
+  try {
+    playCtx = new AudioContext({ sampleRate: 24000 });
+    micCtx = new AudioContext({ sampleRate: 16000 });
+    playCtx.resume(); micCtx.resume();
+    stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+    const url = URL.createObjectURL(new Blob([workletSrc], { type: 'text/javascript' }));
+    await micCtx.audioWorklet.addModule(url);
+    node = new AudioWorkletNode(micCtx, 'capture');
+    const silent = micCtx.createGain(); silent.gain.value = 0;
+    micCtx.createMediaStreamSource(stream).connect(node);
+    node.connect(silent).connect(micCtx.destination);
+    node.port.onmessage = (ev) => {
+      const i16 = new Int16Array(ev.data); let sum = 0;
+      for (let i = 0; i < i16.length; i++) { const v = i16[i] / 32768; sum += v * v; }
+      lv.you = Math.max(lv.you, C.muted ? 0 : Math.min(1, Math.sqrt(sum / i16.length) * 6));
+      if (C.live && !C.muted && ws && ws.readyState === 1) ws.send(ev.data);
+    };
+  } catch (e) {
+    cleanupAudio();
+    S.err = 'Could not access the microphone: ' + e.message;
+    renderHome(); app.querySelector('.wrap').insertAdjacentHTML('afterbegin', `<div class="warn">${esc(S.err)}</div>`);
+    return;
+  }
+
+  Object.assign(C, { active: true, live: false, muted: false, lines: [], partial: {}, t0: 0 });
+  renderCall();
+  meterId = setInterval(() => {
+    lv.youArr.push(lv.you); lv.youArr.shift(); lv.frArr.push(lv.friend); lv.frArr.shift();
+    lv.you *= 0.55; lv.friend *= 0.7;
+    drawMeters();
+  }, 70);
+
+  ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`);
+  ws.binaryType = 'arraybuffer';
+  ws.onopen = () => ws.send(JSON.stringify({ type: 'start', topic: S.topic, mode: S.mode, useDrill: S.useDrill }));
+  ws.onmessage = (ev) => {
+    if (typeof ev.data !== 'string') { playPcm(ev.data); return; }
+    const m = JSON.parse(ev.data);
+    const status = document.getElementById('status');
+    if (m.type === 'status') { if (status) status.textContent = m.message; }
+    else if (m.type === 'ready') {
+      C.live = true; C.t0 = Date.now();
+      keepAwake(true);
+      pingId = setInterval(() => { if (ws && ws.readyState === 1) ws.send('{"type":"ping"}'); }, 20000);
+      if (status) status.textContent = 'Connected. Say hi.';
+      const cs = document.getElementById('callstate'); if (cs) cs.textContent = 'LIVE';
+      timerId = setInterval(() => {
+        const sec = Math.floor((Date.now() - C.t0) / 1000);
+        const el = document.getElementById('clock');
+        if (el) el.innerHTML = `<span>${pad(Math.floor(sec / 60))}</span><b>:</b><em>${pad(sec % 60)}</em>`;
+        if (status && S.state && sec === S.state.goalMin * 60) status.textContent = 'Goal reached. Keep going or wrap up.';
+      }, 500);
+    }
+    else if (m.type === 'interrupted') stopPlayback();
+    else if (m.type === 'partial') { C.partial[m.who] = m.text; refreshCaptions(); }
+    else if (m.type === 'line') { C.lines.push({ who: m.who, text: m.text }); C.partial[m.who] = ''; refreshCaptions(); }
+    else if (m.type === 'error') {
+      if (!C.live) { try { ws.close(); } catch {} endLocal(); S.err = m.message; showHome().then(() => app.querySelector('.wrap')?.insertAdjacentHTML('afterbegin', `<div class="warn">${esc(m.message)}</div>`)); }
+      else if (status) status.textContent = m.message;
+    }
+    else if (m.type === 'ended') {
+      endLocal();
+      if (m.saveError) alert('Heads up: the call could not be saved to your database (' + m.saveError + '). A temporary copy is on the server, but check your Upstash settings.');
+      if (m.hasContent && m.id) location.hash = '#/review/' + m.id; // hashchange -> route() -> showReview
+      else {
+        location.hash = '#/';
+        showHome().then(() => app.querySelector('.wrap')?.insertAdjacentHTML('afterbegin', '<div class="warn">No speech was captured on that call.</div>'));
+      }
+    }
+  };
+  ws.onclose = () => { if (C.live) { endLocal(); S.err = 'Connection to the server was lost.'; showHome(); } };
+}
+
+/* ---------- events ---------- */
+app.addEventListener('click', async (e) => {
+  const el = e.target.closest('[data-act]');
+  if (!el) return;
+  const act = el.dataset.act;
+  if (act === 'mode') { S.topic = document.getElementById('topic')?.value || S.topic; S.mode = el.dataset.v; renderHome(true); }
+  else if (act === 'useDrill') { e.preventDefault(); S.topic = document.getElementById('topic')?.value || S.topic; S.useDrill = !S.useDrill; renderHome(true); }
+  else if (act === 'logout') { e.preventDefault(); await api('/api/logout', { method: 'POST' }); S.authRequired = true; showLogin(); }
+  else if (act === 'start') startCall();
+  else if (act === 'mute') { C.muted = !C.muted; el.textContent = C.muted ? 'Unmute mic' : 'Mute mic'; }
+  else if (act === 'captions') { C.captions = !C.captions; document.getElementById('captions').hidden = !C.captions; el.textContent = C.captions ? 'Hide transcript' : 'Show transcript'; refreshCaptions(); }
+  else if (act === 'end') { el.disabled = true; const st = document.getElementById('status'); if (st) st.textContent = 'Wrapping up…'; if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: 'end' })); }
+  else if (act === 'copyPrompt') {
+    try { await navigator.clipboard.writeText(feedbackPrompt(S.session)); S.copied = true; } catch { S.copied = false; alert('Copy failed. Allow clipboard access and try again.'); }
+    const ta = document.getElementById('fbRaw')?.value || '';
+    renderReview(true); const n = document.getElementById('fbRaw'); if (n) n.value = ta;
+  }
+  else if (act === 'togglePaste') { S.pasteOpen = !S.pasteOpen; renderReview(true); }
+  else if (act === 'saveFeedback') {
+    const raw = document.getElementById('fbRaw').value.trim();
+    const msg = document.getElementById('fbMsg');
+    if (raw.length < 20) { msg.textContent = 'Paste Claude\'s full reply first.'; return; }
+    el.disabled = true; msg.textContent = 'Saving…';
+    try {
+      S.session = await api(`/api/sessions/${S.session.id}/feedback`, { method: 'POST', body: JSON.stringify({ raw }) });
+      S.session.modeLabel = modeLabel(S.session.mode);
+      S.pasteOpen = false; S.state = await api('/api/state'); renderReview(true);
+    } catch (err) { msg.textContent = 'Could not save: ' + err.message; el.disabled = false; }
+  }
+  else if (act === 'drillDone') {
+    e.preventDefault();
+    const done = el.dataset.done !== '1';
+    await api(`/api/sessions/${el.dataset.id}/drill`, { method: 'POST', body: JSON.stringify({ done }) });
+    if (S.session && S.session.id === el.dataset.id) { S.session.drillDone = done; renderReview(true); }
+    else { S.state = await api('/api/state'); renderHome(true); }
+  }
+});
+
+/* ---------- router ---------- */
+async function route() {
+  if (C.active) return;
+  try {
+    const a = await api('/api/auth');
+    S.authRequired = a.required;
+    if (a.required && !a.authed) { showLogin(); return; }
+  } catch { /* fall through; pages show their own errors */ }
+  const h = location.hash || '#/';
+  if (h.startsWith('#/review/')) showReview(h.split('/')[2]);
+  else if (h === '#/history') showHistory();
+  else showHome();
+}
+window.addEventListener('hashchange', route);
+route();
+</script>
+</body>
+</html>
